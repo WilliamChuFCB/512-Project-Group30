@@ -1,0 +1,144 @@
+### Data Description
+
+The source of the data is the Kaggle's "Per Capita Income by County (2021) vs. Education" dataset. The data in this dataset shows the relationship between per capita personal income (2021) and education levels in various counties in the United States.
+
+### Data Clean
+
+```{r}
+df<-read.csv("US counties - education vs per capita personal income - results-20221227-213216.csv")
+df <- df[, -c(1,2, 3, 4,5)]
+df <- na.omit(df)
+df$bachelor_degree_percentage_2015_2019 <- df$bachelor_degree_percentage_2015_2019 / 100
+df$associate_degree_percentage_2016_2020 <- df$associate_degree_percentage_2016_2020 / 100
+str(df)
+```
+### EDA
+```{r}
+library(reshape2)
+library(ggplot2)
+library(ISLR) 
+require(boot)
+cor_df <- round(cor(df), 2)
+melted_cor <- melt(cor_df)
+ggplot(data = melted_cor, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile() +
+  geom_text(aes(Var2, Var1, label = value), size = 5) +
+  scale_fill_gradient2(low = "blue", high = "red"
+                       , name="Correlation") +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.background = element_blank(),
+        axis.text.x = element_text(angle = -90))
+```
+### Regression
+
+#### Linear Regression on all  variables
+```{r}
+lm.fit <- lm(per_capita_personal_income_2021 ~ associate_degree_numbers_2016_2020 +
+                                               bachelor_degree_numbers_2016_2020 +
+                                               associate_degree_percentage_2016_2020 +
+                                               bachelor_degree_percentage_2015_2019, data = df)
+summary(lm.fit)
+```
+
+```{r}
+ypred <- predict(lm.fit, newdata = df)
+y<-df$per_capita_personal_income_2021
+res <- y-ypred
+RMSE <- sqrt(mean(res^2))
+SST <- sum((y - mean(ypred))^2)
+SSR <- sum(res^2)
+R_squared <- 1 - (SSR/SST)
+
+```
+
+```{r}
+# Print RMSE
+cat("RMSE:",mean(res**2)**0.5, "\n")
+
+# Print R-squared value
+cat("R-squared:", R_squared, "\n")
+
+cat("Errors:\n")
+print(mean(res))
+
+```
+```{r}
+plot(lm.fit)
+```
+#### Polynomial Regression on significant numeric variables of linear regression
+
+```{r}
+cv.error=rep(0,5)
+loocv=function(fit){
+  h =lm.influence(fit)$h
+  mean((residuals(fit)/(1-h))^2) 
+  }
+degree =1:5
+
+for (d in degree){
+  glm.fit=glm(per_capita_personal_income_2021~poly(bachelor_degree_percentage_2015_2019,d)+poly(associate_degree_numbers_2016_2020,d)+poly(bachelor_degree_numbers_2016_2020,d)+poly(associate_degree_percentage_2016_2020,d),data=df) 
+  cv.error[d]=loocv(glm.fit)
+}
+print(cv.error)
+
+
+plot(degree,cv.error, type='o')
+
+```
+
+By looking at the graph we can conclude that a quadratic model will be a good fit.
+
+
+```{r}
+glm.fit=glm(per_capita_personal_income_2021~poly(bachelor_degree_percentage_2015_2019,2)+poly(associate_degree_numbers_2016_2020,2)+poly(bachelor_degree_numbers_2016_2020,2)+poly(associate_degree_percentage_2016_2020,2),data=df)
+summary(glm.fit)
+```
+```{r}
+ypred_poly <- predict(glm.fit, newdata = df)
+y<-df$per_capita_personal_income_2021
+res_poly <- y-ypred_poly
+RMSE_poly <- sqrt(mean(res_poly^2))
+SST_poly <- sum((y - mean(ypred_poly))^2)
+SSR_poly <- sum(res_poly^2)
+R_squared_poly <- 1 - (SSR_poly/SST_poly)
+
+```
+```{r}
+# Print RMSE
+cat("poly RMSE:",mean(res_poly**2)**0.5, "\n")
+
+# Print R-squared value
+cat("poly R-squared:", R_squared_poly, "\n")
+
+cat("poly Errors:\n")
+print(mean(res_poly))
+```
+
+```{r}
+plot(glm.fit)
+```
+#### Model Comparison
+
+```{r}
+# Print RMSE
+cat("RMSE:",mean(res**2)**0.5, "\n")
+
+# Print R-squared value
+cat("R-squared:", R_squared, "\n")
+
+cat("Errors:\n")
+print(mean(res))
+
+cat("poly RMSE:",mean(res_poly**2)**0.5, "\n")
+
+# Print R-squared value
+cat("poly R-squared:", R_squared_poly, "\n")
+
+cat("poly Errors:\n")
+print(mean(res_poly))
+```
+
+#### Conclusion
+
+The result of linear regression on all  variables shows that four variables: associate_degree_numbers_2016_2020, bachelor_degree_numbers_2016_2020, associate_degree_percentage_2016_2020, bachelor_degree_percentage_2015_2019 can use to predict the income. It can be concluded that the number and percentage of people with degrees in the local area will affect the level of income
