@@ -30,7 +30,7 @@ ggplot(data = melted_cor, aes(x=Var1, y=Var2, fill=value)) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank(),
         panel.background = element_blank(),
-        axis.text.x = element_text(angle = -90))
+        axis.text.x = element_text(angle = 45, hjust=1))
 ```
 ### Regression
 
@@ -66,7 +66,10 @@ print(mean(res))
 
 ```
 ```{r}
+png("linear.png")
+par(mfrow = c(2, 2))
 plot(lm.fit)
+dev.off()
 ```
 #### Polynomial Regression on significant numeric variables of linear regression
 
@@ -118,7 +121,10 @@ print(mean(res_poly))
 ```
 
 ```{r}
+png("poly.png")
+par(mfrow = c(2, 2))
 plot(glm.fit)
+dev.off()
 ```
 #### Model Comparison
 
