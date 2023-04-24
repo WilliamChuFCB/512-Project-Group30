@@ -1,8 +1,10 @@
 ### Data Description
 
-The source of the data is the Kaggle's "Per Capita Income by County (2021) vs. Education" dataset. The data in this dataset shows the relationship between per capita personal income (2021) and education levels in various counties in the United States.
+The source of the data is the Kaggle's "Per Capita Income by County (2021) vs. Education" dataset. The data set contains information on county-level statistics, including per capita personal income, the number of associate and bachelor degrees, and the percentage of the population with associate and bachelor degrees.
 
 ### Data Clean
+
+The code first reads in the data and removes any missing values. Then, it scales the percentage of the population with associate and bachelor degrees to a range between 0 and 1. 
 
 ```{r}
 df<-read.csv("US counties - education vs per capita personal income - results-20221227-213216.csv")
@@ -138,7 +140,10 @@ cat("poly R-squared:", R_squared_poly, "\n")
 cat("poly Errors:\n")
 print(mean(res_poly))
 ```
+#### Method
+
+We constructed a linear regression model on this dataset with personal income per capita as the dependent variable and the number and percentage of degrees as independent variables. The output includes intercepts, coefficients, standard errors, t-values, and p-values for each independent variable, and Residual standard error, multiple R-squared, and adjusted R-squared values for the entire model. Afterwards, a polynomial regression analysis with an order of 1 to 5 was carried out to further explore the relationship between educational attainment and per capita income.
 
 #### Conclusion
 
-The result of linear regression on all  variables shows that four variables: associate_degree_numbers_2016_2020, bachelor_degree_numbers_2016_2020, associate_degree_percentage_2016_2020, bachelor_degree_percentage_2015_2019 can use to predict the income. It can be concluded that the number and percentage of people with degrees in the local area will affect the level of income
+The results of linear regression analysis show that there is a positive and statistically significant relationship between educational attainment and per capita personal income. An R-squared value of 0.42 indicates that the model explains 42% of the variability in per capita personal income across counties. Additionally, a root mean square error (RMSE) of 11,160.51 indicates that the average difference between the predicted and actual value of personal income per capita is $11,160.51. Results of the polynomial regression analysis indicated that the second-order polynomial model provided the best fit to the data, with an R-squared value of 0.44 and a low RMSE of 10,957.73. Overall, the analysis shows that higher educational attainment is associated with higher levels of per capita personal income at the U.S. county level.
