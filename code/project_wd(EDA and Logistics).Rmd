@@ -12,7 +12,7 @@ library(tidyverse)
 library(caret)
 library(dslabs)
 library(ggplot2)
-
+library(pROC)
 ```
 
 ```{r}
@@ -20,6 +20,10 @@ df=read.csv("adult.csv")
 dim(df)
 head(df)
 ```
+
+**Data Description:**
+
+This data originates from the 1994 Census database and we downloaded it from UCI Machine Learning Repository. It contains 32561 rows where each row is consist of information of a single person, such as education level, race and occupation. The target variable of this dataset is “income”, which indicates whether a person’s income exceeds $50K. The predictor variables include age, work class, education, marital status, race, sex and working hours per week. It is appropriate to utilize these independent variables to train a binary classification model to predict whether the income exceeds $50K.  
 
 ```{r}
 summary(df)
@@ -31,19 +35,28 @@ df=df[df["native.country"]=="United-States",]
 df=df[df["workclass"]!="?" & df["occupation"]!="?",]
 df[df["income"]==">50K",]["income"]=1
 df[df["income"]=="<=50K",]["income"]=0
-df=df[,!colnames(df) %in% c("fnlwgt","capital.gain","capital.loss","native.country")]
+df=df[,!colnames(df) %in% c("fnlwgt","native.country")]
+write.csv(x = df,file = "adult_cleaned.csv",row.names = FALSE)
+df=df[,!colnames(df) %in% c("capital.gain","capital.loss")]
+
 dim(df)
 head(df)
 ```
 
 ```{r}
+df$education[df$education %in% c("10th","11th","12th","1st-4th","5th-6th","7th-8th","9th","Assoc-acdm","Assoc-voc")]="Others"
+```
+
+```{r}
+
 table_education=table(df["education"]) %>% as.data.frame
 table_education$education=as.character(table_education$education)
 
-ggplot(table_education, aes(x="", y=Freq, fill=education))+
+p=ggplot(table_education, aes(x="", y=Freq, fill=education))+
   geom_bar(width = 1, stat = "identity")+
   coord_polar("y", start=0)+
-  ggtitle("Piechart of Education")+
+  ggtitle("Piechart of Education Levels")+
+  scale_fill_brewer(palette="Pastel1")+
   theme(
   axis.title.x = element_blank(),
   axis.title.y = element_blank(),
@@ -53,6 +66,8 @@ ggplot(table_education, aes(x="", y=Freq, fill=education))+
   axis.ticks = element_blank(),
   plot.title=element_text(size=14, face="bold")
   )
+p
+ggsave("Piechart.jpeg",dpi=700)
 
 ```
 
@@ -61,7 +76,16 @@ table_edunum=table(df$education.num,df$income) %>% as.data.frame
 colnames(table_edunum)=c("education.num","income","Freq")
 
 ggplot(table_edunum, aes(fill=income, y=Freq, x=education.num)) + 
-    geom_bar(position="dodge", stat="identity")
+  geom_bar(position="dodge", stat="identity")+
+  ggtitle("Histogram of education years by income category")+
+  scale_fill_discrete(labels=c('<= $50K', '> $50K'))+
+  theme(
+  plot.title=element_text(size=14, face="bold")
+  )+
+  xlab("Years of Education")+
+  ylab("Frequency")
+
+ggsave("histogram.jpeg",dpi=400)
 ```
 
 ```{r}
@@ -117,6 +141,12 @@ p_hat_logit=predict(fit2, newdata = test, type = "response")
 y_hat_logit=factor(ifelse(p_hat_logit > 0.5, "1", "0"))
 confusionMatrix(y_hat_logit, factor(test$y))
 ```
+
+```{r,message=FALSE}
+test_roc = roc(test$y ~ as.numeric(y_hat_logit), plot = TRUE, print.auc = TRUE)
+```
+
+According to the coefficients, we can find that.... one-hot encoding...
 
 ```{r}
 fit3=glm(y~ age+workclass+education.num+occupation+sex+hours.per.week, family = "binomial", data = train)
