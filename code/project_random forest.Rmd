@@ -1,0 +1,286 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-04-24"
+---
+
+```{r}
+library(ISLR)
+library(gam)
+library(tidyverse)
+library(caret)
+library(dslabs)
+
+df <- read.csv("../data/Placement_Data_Full_Class.csv")
+```
+
+```{r}
+dummy <- model.matrix(~status, data = df)
+df$status_placed <- factor(dummy[,2])
+```
+
+```{r}
+fit_glm <- glm(status_placed ~ hsc_p, data=df, family = "binomial")
+p_hat_glm <- predict(fit_glm, df, type="response")
+y_hat_glm <- factor(ifelse(p_hat_glm > 0.5, 1, 0))
+confusionMatrix(y_hat_glm, df$status_placed)
+confusionMatrix(y_hat_glm, df$status_placed)$overall["Accuracy"]
+
+y <- df$status_placed
+x <- df$hsc_p
+train.plot <- data.frame(x, y)
+train.plot$z <- 0
+train.plot[train.plot$y == 1,]$z <- 1
+
+
+plot(z ~ x, data = train.plot, 
+     col = "darkorange", pch = "|", ylim = c(-0.2, 1),
+     main = "Using Logistic Regression for Classification")
+abline(h = 0, lty = 3)
+abline(h = 1, lty = 3)
+abline(h = 0.5, lty = 2)
+curve(predict(fit_glm, data.frame(hsc_p = x), type = "response"), 
+      add = TRUE, lwd = 3, col = "dodgerblue")
+abline(v = -coef(fit_glm)[1] / coef(fit_glm)[2], lwd = 2)
+```
+
+```{r}
+fit_glm <- glm(status_placed ~ degree_p, data=df, family = "binomial")
+p_hat_glm <- predict(fit_glm, df, type="response")
+y_hat_glm <- factor(ifelse(p_hat_glm > 0.5, 1, 0))
+confusionMatrix(y_hat_glm, df$status_placed)
+confusionMatrix(y_hat_glm, df$status_placed)$overall["Accuracy"]
+
+y <- df$status_placed
+x <- df$degree_p
+train.plot <- data.frame(x, y)
+train.plot$z <- 0
+train.plot[train.plot$y == 1,]$z <- 1
+
+
+plot(z ~ x, data = train.plot, 
+     col = "darkorange", pch = "|", ylim = c(-0.2, 1),
+     main = "Using Logistic Regression for Classification")
+abline(h = 0, lty = 3)
+abline(h = 1, lty = 3)
+abline(h = 0.5, lty = 2)
+curve(predict(fit_glm, data.frame(degree_p = x), type = "response"), 
+      add = TRUE, lwd = 3, col = "dodgerblue")
+abline(v = -coef(fit_glm)[1] / coef(fit_glm)[2], lwd = 2)
+```
+
+
+
+
+```{r}
+library(randomForest)
+
+categorical_vars <- c("gender", "ssc_b", "hsc_b", "hsc_s", "degree_t", "workex", "specialisation", "status")
+df[, categorical_vars] <- lapply(df[, categorical_vars], as.factor)
+```
+
+```{r}
+df1 <- subset(df, select=-c(sl_no, status, salary))
+
+set.seed(123)
+train_idx <- sample(1:nrow(df1), 0.7*nrow(df1))
+train_data <- df1[train_idx, ]
+test_data <- df1[-train_idx, ]
+```
+
+```{r}
+ss <- subset(df, select=c(ssc_p, status))
+ss$category <- "Secondary School"
+colnames(ss)[1] <- "grade"
+
+hs <- subset(df, select=c(hsc_p, status))
+hs$category <- "High School"
+colnames(hs)[1] <- "grade"
+
+ug <- subset(df, select=c(degree_p, status))
+ug$category <- "Undergrads"
+colnames(ug)[1] <- "grade"
+
+gr <- subset(df, select=c(mba_p, status))
+gr$category <- "Grads"
+colnames(gr)[1] <- "grade"
+
+
+df_combined <- rbind(ss, hs, ug, gr)
+df_combined$category <- factor(df_combined$category, levels = c("Secondary School", "High School", "Undergrads", "Grads"))
+df_combined
+```
+
+
+
+```{r}
+df_combined %>%
+  ggplot(aes(fill=status, y=grade, x=category)) + 
+    geom_violin(position="dodge", alpha=0.5) +
+    ggtitle("Relationship between Grades and Placement") +
+    xlab("Education Category") +
+    ylab("Grade") 
+
+ggsave("vis.png",device='tiff', dpi=400)
+```
+
+```{r, warning=FALSE}
+#CV
+
+sample <- sample(c(TRUE, FALSE), nrow(df1), replace=TRUE, prob=c(0.8,0.2))
+train <- df1[sample, ]
+test <- df1[!sample, ]
+
+library(Metrics)
+
+result1 <- c()
+result2 <- c()
+result3 <- c()
+
+for (i in 1:100) {
+  model <- randomForest(status_placed ~., data=train, mtry = 4, ntree = i)
+  error <- sum(as.numeric(as.character(predict(model, test))) != as.numeric(test$status_placed)-1) / 215
+  result1 <- append(result1, error)
+}
+
+for (i in 1:100) {
+  model <- randomForest(status_placed ~., data=train, mtry = 8, ntree = i)
+  error <- sum(as.numeric(as.character(predict(model, test))) != as.numeric(test$status_placed)-1) / 215
+  result2 <- append(result2, error)
+}
+
+for (i in 1:100) {
+  model <- randomForest(status_placed ~., data=train, mtry = 12, ntree = i)
+  error <- sum(as.numeric(as.character(predict(model, test))) != as.numeric(test$status_placed)-1) / 215
+  result3 <- append(result3, error)
+}
+```
+
+```{r}
+ntree <- 1:100
+
+df <- data.frame(ntree, result1, result2, result3)
+
+plot <- ggplot(df, aes(x=ntree)) + 
+  geom_line(aes(y = result1, color = "4"), linetype = "solid") + 
+  geom_line(aes(y = result2, color = "8"), linetype = "solid") + 
+  geom_line(aes(y = result3, color = "12"), linetype = "solid")
+
+plot <- plot + 
+  labs(color = "Number of Variable", y = "Error", x = "Number of Trees", title = "Cross-validation for Tree Number") + 
+  scale_color_manual(values = c("4" = "red", "8" = "green", "12" = "blue")) +
+  guides(color = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid"))))
+
+print(plot)
+```
+
+
+```{r}
+set.seed(123)
+
+rand_frst1 <- randomForest(status_placed ~., data=df1, ntree=14, mtry=8, keep.forest=FALSE,
+                          importance=TRUE)
+
+
+```
+
+
+
+```{r}
+df <- read.csv("../data/Placement_Data_Full_Class.csv")
+
+df2 <- na.omit(df)
+
+df2 <- subset(df2, select=-c(status))
+
+set.seed(123)
+
+rand_frst2 <- randomForest(salary ~., data=df2, ntree=500, keep.forest=FALSE,
+                          importance=TRUE)
+
+sample <- sample(c(TRUE, FALSE), nrow(df2), replace=TRUE, prob=c(0.8,0.2))
+train <- df2[sample, ]
+test <- df2[!sample, ]
+```
+
+
+```{r, warning=FALSE}
+#CV2
+
+library(Metrics)
+
+result1 <- c()
+result2 <- c()
+result3 <- c()
+
+for (i in 1:100) {
+  model <- randomForest(salary ~ ., data = train, mtry = 4, ntree = i)
+  error <- rmse(predict(model, test), test$salary)
+  result1 <- append(result1, error)
+}
+
+for (i in 1:100) {
+  model <- randomForest(salary ~ ., data = train, mtry = 8, ntree = i)
+  error <- rmse(predict(model, test), test$salary)
+  result2 <- append(result2, error)
+}
+
+for (i in 1:100) {
+  model <- randomForest(salary ~ ., data = train, mtry = 12, ntree = i)
+  error <- rmse(predict(model, test), test$salary)
+  result3 <- append(result3, error)
+}
+```
+
+```{r}
+ntree <- 1:100
+
+df <- data.frame(ntree, result1, result2, result3)
+
+plot <- ggplot(df, aes(x=ntree)) + 
+  geom_line(aes(y = result1, color = "4"), linetype = "solid") + 
+  geom_line(aes(y = result2, color = "8"), linetype = "solid") + 
+  geom_line(aes(y = result3, color = "12"), linetype = "solid")
+
+plot <- plot + 
+  labs(color = "Number of Variable", y = "Error", x = "Number of Trees", title = "Cross-validation for Tree Number") + 
+  scale_color_manual(values = c("4" = "red", "8" = "green", "12" = "blue")) +
+  guides(color = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid"))))
+
+print(plot)
+```
+
+```{r}
+pur1 <- rownames_to_column(as.data.frame(rand_frst1$importance))
+pur2 <- rownames_to_column(as.data.frame(rand_frst2$importance))
+```
+
+```{r}
+library(gridExtra)
+
+# Create the first plot
+plot1 <- pur1 %>%
+  mutate(rowname = fct_reorder(rowname, MeanDecreaseGini)) %>%
+  ggplot( aes(x=rowname, y=MeanDecreaseGini)) +
+    geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.6) +
+    coord_flip() +
+    xlab("Feature") +
+    ylab("Importance") +
+    ggtitle("Placement Prediction")
+
+# Create the second plot
+plot2 <- pur2 %>%
+  mutate(rowname = fct_reorder(rowname, IncNodePurity)) %>%
+  ggplot( aes(x=rowname, y=IncNodePurity)) +
+    geom_bar(stat="identity", fill="#f68060", alpha=.6, width=.6) +
+    coord_flip() +
+    xlab("Feature") +
+    ylab("Importance")  +
+    ggtitle("Salary Prediction")
+
+grid.arrange(plot1, plot2, ncol=2)
+ g <- arrangeGrob(plot1, plot2, ncol=2)
+
+ggsave("feature.jpg", g, device='tiff', dpi=700)
+```
+
