@@ -13,10 +13,11 @@ library(caret)
 library(dslabs)
 library(ggplot2)
 library(pROC)
+
 ```
 
 ```{r}
-df=read.csv("adult.csv")
+df=read.csv("../data/census.csv")
 dim(df)
 head(df)
 ```
@@ -36,7 +37,7 @@ df=df[df["workclass"]!="?" & df["occupation"]!="?",]
 df[df["income"]==">50K",]["income"]=1
 df[df["income"]=="<=50K",]["income"]=0
 df=df[,!colnames(df) %in% c("fnlwgt","native.country")]
-write.csv(x = df,file = "adult_cleaned.csv",row.names = FALSE)
+# write.csv(x = df,file = "census_cleaned.csv",row.names = FALSE)
 df=df[,!colnames(df) %in% c("capital.gain","capital.loss")]
 
 dim(df)
