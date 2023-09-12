@@ -1,5 +1,9 @@
 # 512-Project-Group30
 
+You can access our final poster through this link:
+
+https://drive.google.com/file/d/1Ml1MfTAIw7xN3TVXJ-WYjdseweOm55ZK/view?usp=drive_link
+
 ## Introduction
 
 In such an era when the economic recession caused by the COVID-19 pandemic and the great turbulence of global geopolitics has dominated the world, more and more people are worried about their employment situations, hoping that their salaries can be raised to at least offset the pressure from the severe inflation recently. Also, new graduates panic about if they can be employed after graduation. In this case, it is practical to find out the factors that determine the salaries as well as the likelihood of being employed.
